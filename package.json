@@ -1,0 +1,31 @@
+{
+	"name": "questline",
+	"version": "0.1.0",
+	"description": "Quests as the actionable layer over your projects and life areas.",
+	"main": "main.js",
+	"type": "module",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "npm run typecheck && node esbuild.config.mjs production",
+		"check": "npm test && npm run build",
+		"deploy": "test -n \"$VAULT_PLUGIN_DIR\" && test -d \"$VAULT_PLUGIN_DIR\" && cp main.js manifest.json styles.css \"$VAULT_PLUGIN_DIR/\"",
+		"test": "esbuild scripts/logic-test.ts --bundle --platform=node --format=cjs --outfile=scripts/.logic-test.cjs --log-level=error && node scripts/.logic-test.cjs",
+		"typecheck": "tsc --noEmit --skipLibCheck --noUnusedLocals --noUnusedParameters",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [
+		"obsidian",
+		"quests",
+		"projects",
+		"productivity"
+	],
+	"author": "andrewkfb",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^22.15.17",
+		"esbuild": "0.25.5",
+		"obsidian": "^1.13.1",
+		"tslib": "2.4.0",
+		"typescript": "^5.8.3"
+	}
+}

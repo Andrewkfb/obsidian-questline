@@ -1,0 +1,10 @@
+{
+	"id": "questline",
+	"name": "Questline",
+	"version": "0.1.0",
+	"minAppVersion": "1.7.2",
+	"description": "Quests as the actionable layer over your projects and life areas.",
+	"author": "andrewkfb",
+	"authorUrl": "https://github.com/andrewkfb",
+	"isDesktopOnly": false
+}
