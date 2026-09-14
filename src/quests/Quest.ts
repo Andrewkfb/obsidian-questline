@@ -153,6 +153,37 @@ export function isReady(quest: Quest, lookup: QuestLookup): boolean {
     return !isBlocked(quest, lookup)
 }
 
+export interface AreaSummary {
+    /** Everything unfinished. The honest headline number for an area. */
+    live: number
+    active: number
+    done: number
+    total: number
+}
+
+/**
+ * What a life area actually holds.
+ *
+ * `live` leads rather than `active` on purpose: `available` is the status every
+ * quest starts in, so counting only `active` reports a freshly-filled area as
+ * empty and reads as though the area were never linked at all.
+ */
+export function summariseArea(quests: Quest[]): AreaSummary {
+    let live = 0
+    let active = 0
+    let done = 0
+    let total = 0
+    for (const quest of quests) {
+        if (isSealed(quest)) continue
+        live++
+        if (quest.status === 'active') active++
+        const progress = progressOf(quest)
+        done += progress.done
+        total += progress.total
+    }
+    return { live, active, done, total }
+}
+
 /** The reciprocal of `blocked-by`: what is stacked behind this quest. */
 export function blockedByThis(quest: Quest, all: Quest[]): Quest[] {
     return all.filter(other => other.blockedBy.includes(quest.title))

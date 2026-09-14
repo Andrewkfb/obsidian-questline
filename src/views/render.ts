@@ -8,7 +8,7 @@
 
 import { Notice, setIcon, type App } from 'obsidian'
 import type Questline from '../main'
-import { STATUS_LABELS, progressOf, type Quest } from '../quests/Quest'
+import { STATUS_LABELS, progressOf, summariseArea, type Quest } from '../quests/Quest'
 
 export interface RenderContext {
     plugin: Questline
@@ -192,17 +192,12 @@ export function renderAreaStrip(parent: HTMLElement, ctx: RenderContext): void {
     const today = ctx.plugin.todayISO()
 
     for (const area of areas) {
-        const live = index.questsInArea(area).filter(quest => quest.status !== 'complete')
-        const active = live.filter(quest => quest.status === 'active').length
-        let done = 0
-        let total = 0
-        for (const quest of live) {
-            const progress = progressOf(quest)
-            done += progress.done
-            total += progress.total
-        }
+        const { live, active, done, total } = summariseArea(index.questsInArea(area))
+        const open = total - done
 
-        const idleDays = active === 0 ? index.areaIdleDays(area, today) : null
+        // Only an area with nothing unfinished can be neglected. Quests sitting
+        // at `available` are work waiting, not an absence of work.
+        const idleDays = live === 0 ? index.areaIdleDays(area, today) : null
         const neglected = settings.neglectWarn && idleDays !== null && idleDays >= settings.neglectDays
 
         const cell = strip.createDiv('ql-area')
@@ -210,14 +205,19 @@ export function renderAreaStrip(parent: HTMLElement, ctx: RenderContext): void {
         if (neglected) cell.addClass('is-neglected')
 
         cell.createDiv('ql-area-top').createSpan({ cls: 'ql-area-name', text: area })
-        cell.createSpan({ cls: 'ql-area-count', text: `${active} active` })
-        meter(cell, total > 0 ? done / total : 0)
         cell.createSpan({
-            cls: 'ql-area-sub',
-            text: active === 0
-                ? (idleDays !== null ? `no active quest · ${idleDays} days` : 'nothing active')
-                : `${total - done} objectives open`,
+            cls: 'ql-area-count',
+            text: live === 0 ? 'nothing yet' : `${live} quest${live === 1 ? '' : 's'}`,
         })
+        meter(cell, total > 0 ? done / total : 0)
+
+        let sub: string
+        if (live === 0) sub = idleDays !== null ? `nothing for ${idleDays} days` : 'no quests here'
+        else if (total === 0) sub = active > 0 ? `${active} active` : 'none started'
+        else if (active > 0) sub = `${active} active · ${open} open`
+        else sub = `none started · ${open} open`
+
+        cell.createSpan({ cls: 'ql-area-sub', text: sub })
     }
 }
 

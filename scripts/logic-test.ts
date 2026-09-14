@@ -255,6 +255,34 @@ check('a week note defaults sensibly', defaultSections('week'), ['due', 'sealed'
 check('a year note defaults coarser', defaultSections('year'), ['sealed-by-month', 'life-areas', 'long-running'])
 check('a project embed defaults to a list', defaultSections('project'), ['objectives'])
 
+/* ------------------------------------------------------------- area summary */
+
+import { summariseArea } from '../src/quests/Quest'
+
+const areaQuest = (status: string, done: number, open: number): any => ({
+    path: 'x', title: 'x', status, areas: [], projects: [], priority: null,
+    blockedBy: [], due: null, accepted: null, completed: null,
+    objectives: [
+        ...Array.from({ length: done }, (_, i) => ({ text: 'd' + i, done: true, line: i })),
+        ...Array.from({ length: open }, (_, i) => ({ text: 'o' + i, done: false, line: 100 + i })),
+    ],
+})
+
+// The reported bug: an area holding only `available` quests read as empty,
+// because the strip counted `active` and nothing else.
+check('available quests are live, not nothing',
+    summariseArea([areaQuest('available', 0, 4), areaQuest('available', 0, 8)]),
+    { live: 2, active: 0, done: 0, total: 12 })
+check('active is still counted separately',
+    summariseArea([areaQuest('active', 1, 3), areaQuest('available', 0, 2)]),
+    { live: 2, active: 1, done: 1, total: 6 })
+check('held quests count as live', summariseArea([areaQuest('held', 0, 2)]).live, 1)
+check('complete quests are excluded entirely',
+    summariseArea([areaQuest('complete', 5, 0), areaQuest('available', 0, 3)]),
+    { live: 1, active: 0, done: 0, total: 3 })
+check('a genuinely empty area', summariseArea([]), { live: 0, active: 0, done: 0, total: 0 })
+check('an area of only sealed quests is empty', summariseArea([areaQuest('complete', 2, 0)]).live, 0)
+
 /* -------------------------------------------------------------------- done */
 
 if (failures.length > 0) {
