@@ -361,6 +361,34 @@ check('ready is still not a status — it is a section',
     parseQuery('status: ready').errors.length, 1)
 check('but show: ready remains valid', parseQuery('show: ready').show, ['ready'])
 
+/* ---------------------------------------------------------------- wikilinks */
+
+import { parseInline } from '../src/quests/inline'
+
+check('text with no link is one run', parseInline('Lock picture'),
+    [{ kind: 'text', text: 'Lock picture' }])
+check('a bare link', parseInline('[[Bloodless Sky]]'),
+    [{ kind: 'link', target: 'Bloodless Sky', display: 'Bloodless Sky' }])
+check('a link with surrounding text', parseInline('Send to [[Delphino]] first'),
+    [{ kind: 'text', text: 'Send to ' },
+     { kind: 'link', target: 'Delphino', display: 'Delphino' },
+     { kind: 'text', text: ' first' }])
+check('an alias shows the alias', parseInline('[[Bloodless Sky|the feature]]'),
+    [{ kind: 'link', target: 'Bloodless Sky', display: 'the feature' }])
+check('a subpath reads like Obsidian', parseInline('[[Notes#Act Two]]'),
+    [{ kind: 'link', target: 'Notes#Act Two', display: 'Notes > Act Two' }])
+check('a subpath with an alias prefers the alias', parseInline('[[Notes#Act Two|act two]]'),
+    [{ kind: 'link', target: 'Notes#Act Two', display: 'act two' }])
+check('two links do not merge', parseInline('[[A]] and [[B]]'),
+    [{ kind: 'link', target: 'A', display: 'A' },
+     { kind: 'text', text: ' and ' },
+     { kind: 'link', target: 'B', display: 'B' }])
+check('an unclosed link stays text', parseInline('Check [[Bloodless Sky'),
+    [{ kind: 'text', text: 'Check [[Bloodless Sky' }])
+check('empty brackets stay text', parseInline('[[]]'), [{ kind: 'text', text: '[[]]' }])
+check('parseInline is not stateful across calls',
+    [parseInline('[[A]]').length, parseInline('[[A]]').length], [1, 1])
+
 /* -------------------------------------------------------------------- done */
 
 if (failures.length > 0) {

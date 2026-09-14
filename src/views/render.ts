@@ -6,9 +6,10 @@
  * project note.
  */
 
-import { Notice, setIcon, type App } from 'obsidian'
+import { Keymap, Notice, setIcon, type App } from 'obsidian'
 import type Questline from '../main'
 import { STATUS_LABELS, progressOf, summariseArea, type Quest } from '../quests/Quest'
+import { parseInline } from '../quests/inline'
 import { DueModal } from './modals'
 
 export interface RenderContext {
@@ -45,6 +46,39 @@ export function questLink(parent: HTMLElement, quest: Quest, ctx: RenderContext,
         void ctx.app.workspace.getLeaf(false).openFile(file)
     })
     return link
+}
+
+/**
+ * Draws text that may contain `[[wikilinks]]`.
+ *
+ * Links are real anchors carrying `internal-link` and `data-href`, so themes
+ * style them and Obsidian's own hover-preview sees them. The click is handled
+ * here rather than left to the global handler so modifier-clicks still open in
+ * a new tab, and so the toggle behind the text does not also fire.
+ */
+export function renderInline(parent: HTMLElement, text: string, ctx: RenderContext): void {
+    for (const segment of parseInline(text)) {
+        if (segment.kind === 'text') {
+            parent.appendText(segment.text)
+            continue
+        }
+
+        const link = parent.createEl('a', { cls: 'internal-link', text: segment.display })
+        link.dataset.href = segment.target
+        link.setAttribute('href', segment.target)
+
+        const resolved = ctx.app.metadataCache.getFirstLinkpathDest(
+            segment.target.split('#')[0],
+            ctx.sourcePath,
+        )
+        if (!resolved) link.addClass('is-unresolved')
+
+        link.addEventListener('click', event => {
+            event.preventDefault()
+            event.stopPropagation()
+            void ctx.app.workspace.openLinkText(segment.target, ctx.sourcePath, Keymap.isModEvent(event))
+        })
+    }
 }
 
 export function noteLink(parent: HTMLElement, name: string, ctx: RenderContext, cls: string): void {
@@ -159,15 +193,24 @@ export function renderQuestRow(
     if (open) {
         const list = main.createEl('ul', 'ql-objectives')
         for (const objective of quest.objectives) {
-            const button = list.createEl('li').createEl('button', {
-                cls: 'ql-objective',
-                attr: { 'aria-pressed': String(objective.done) },
+            // The row is a list item, not a button: objective text can contain
+            // links, and an anchor inside a button is both invalid and unusable
+            // — the click would always toggle instead of following the link.
+            const item = list.createEl('li', 'ql-objective')
+            item.toggleClass('is-done', objective.done)
+
+            const box = item.createEl('button', {
+                cls: 'ql-box',
+                attr: { 'aria-pressed': String(objective.done), 'aria-label': objective.text },
             })
-            button.toggleClass('is-done', objective.done)
-            const box = button.createSpan('ql-box')
             if (objective.done) setIcon(box, 'check')
-            button.createSpan({ cls: 'ql-objective-text', text: objective.text })
-            button.addEventListener('click', () => void ctx.plugin.toggleObjective(quest, objective))
+            box.addEventListener('click', () => void ctx.plugin.toggleObjective(quest, objective))
+
+            const text = item.createSpan('ql-objective-text')
+            renderInline(text, objective.text, ctx)
+            // Clicking the text still toggles, which keeps the large hit target
+            // the row had before. Links inside it stop the event first.
+            text.addEventListener('click', () => void ctx.plugin.toggleObjective(quest, objective))
         }
     }
 
