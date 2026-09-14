@@ -56,15 +56,34 @@ export function dueChip(plugin: Questline, quest: Quest): DueChip | null {
     return { text: `due ${formatShortDate(quest.due, plugin.todayISO())}`, cls: '', icon: 'calendar' }
 }
 
+/**
+ * A link to a note, drawn the way Obsidian draws links everywhere else.
+ *
+ * These were `<button>` elements, which meant fighting the app's own button
+ * chrome with resets weak enough for core CSS to win — a quest title rendered
+ * as a padded, centred, filled bar. An anchor carrying `internal-link` cannot
+ * lose that fight, inherits whatever the theme does to links, and gets
+ * hover-preview and modifier-click for free.
+ */
+function internalLink(parent: HTMLElement, target: string, label: string, ctx: RenderContext, cls: string): HTMLAnchorElement {
+    const link = parent.createEl('a', { cls: `internal-link ${cls}`, text: label })
+    link.dataset.href = target
+    link.setAttribute('href', target)
+    if (!ctx.app.metadataCache.getFirstLinkpathDest(target, ctx.sourcePath)) link.addClass('is-unresolved')
+
+    link.addEventListener('click', event => {
+        event.preventDefault()
+        event.stopPropagation()
+        void ctx.app.workspace.openLinkText(target, ctx.sourcePath, Keymap.isModEvent(event))
+    })
+    return link
+}
+
 export function questLink(parent: HTMLElement, quest: Quest, ctx: RenderContext, cls: string): HTMLElement {
-    const link = parent.createEl('button', { cls, text: quest.title })
+    // Addressed by path: two quests may share a title, and the file is the truth.
+    const link = internalLink(parent, quest.path, quest.title, ctx, cls)
     link.addEventListener('click', () => {
-        const file = ctx.app.vault.getFileByPath(quest.path)
-        if (!file) {
-            new Notice(`${quest.title} is no longer in the vault.`)
-            return
-        }
-        void ctx.app.workspace.getLeaf(false).openFile(file)
+        if (!ctx.app.vault.getFileByPath(quest.path)) new Notice(`${quest.title} is no longer in the vault.`)
     })
     return link
 }
@@ -103,10 +122,7 @@ export function renderInline(parent: HTMLElement, text: string, ctx: RenderConte
 }
 
 export function noteLink(parent: HTMLElement, name: string, ctx: RenderContext, cls: string): void {
-    const link = parent.createEl('button', { cls, text: name })
-    link.addEventListener('click', () => {
-        void ctx.app.workspace.openLinkText(name, ctx.sourcePath, false)
-    })
+    internalLink(parent, name, name, ctx, cls)
 }
 
 export function statusChip(parent: HTMLElement, quest: Quest): void {
