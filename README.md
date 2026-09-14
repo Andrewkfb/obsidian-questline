@@ -50,12 +50,19 @@ In a periodic note — `period: this` reads the note's own name, so `2026`,
 | --- | --- |
 | `project` | `this`, or a project name |
 | `period` | `this`, or `2026` / `Sep-2026` / `2026-09` / `2026-W37` |
-| `status` | any of `active`, `held`, `available`, `complete` |
+| `status` | any of `active`, `held`, `available`, `complete`, `blocked` |
 | `show` | `objectives`, `due`, `sealed`, `ready`, `life-areas`, `sealed-by-month`, `long-running` |
 | `horizon` | e.g. `10d` — how far past the period's end `due` still reaches |
 | `blocking` | `true` / `false` — list quests elsewhere waiting on this one |
 | `blocking-scope` | `vault` (default) or `project` |
 | `limit` | a positive number |
+
+`blocked` is derived, never written in a note: a quest is blocked while any
+`blocked-by` entry is unsealed. It outranks the declared status, so a quest
+marked `active` that is waiting on something matches `status: blocked` and not
+`status: active` — on the board and in a block alike. A block that names no
+statuses still includes blocked quests, so adding a blocker never makes a quest
+vanish from a project note.
 
 `show` defaults to the altitude of the note: a week gets `due, sealed, ready`,
 a month `sealed, due, life-areas`, a year `sealed-by-month, life-areas,

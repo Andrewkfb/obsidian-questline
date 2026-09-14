@@ -348,6 +348,19 @@ check('one open blocker among sealed ones still blocks',
 check('a blocker naming no quest still blocks',
     effectiveStatus(mk('x', 'active', ['ghost']), look2), 'blocked')
 
+/* ------------------------------------------------- blocked in codeblock query */
+
+check('the query accepts blocked as a status',
+    parseQuery('project: this\nstatus: active, blocked').statuses, ['active', 'blocked'])
+check('blocked alone is valid', parseQuery('status: blocked').statuses, ['blocked'])
+check('accepting blocked did not loosen validation',
+    parseQuery('status: blocked, sideways').errors, ['Unknown status "sideways".'])
+check('a blocked-only query keeps the valid part',
+    parseQuery('status: blocked, sideways').statuses, ['blocked'])
+check('ready is still not a status — it is a section',
+    parseQuery('status: ready').errors.length, 1)
+check('but show: ready remains valid', parseQuery('show: ready').show, ['ready'])
+
 /* -------------------------------------------------------------------- done */
 
 if (failures.length > 0) {

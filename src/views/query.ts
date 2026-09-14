@@ -12,7 +12,7 @@
  * a typo should render a warning inside the block, not blank the note.
  */
 
-import { QUEST_STATUSES, type QuestStatus } from '../quests/Quest'
+import { BOARD_STATUSES, type BoardStatus } from '../quests/Quest'
 
 export type Section =
     | 'objectives'
@@ -31,7 +31,11 @@ export interface QuestQuery {
     /** `this` is left as-is here; the renderer resolves it against the host note. */
     project: string | null
     period: string | null
-    statuses: QuestStatus[] | null
+    /**
+     * Matched against a quest's effective status, not its frontmatter, so
+     * `blocked` is a value here even though it can never be one in a note.
+     */
+    statuses: BoardStatus[] | null
     show: Section[] | null
     /** Days past the end of a period that `due` still reaches. */
     horizon: number
@@ -89,9 +93,9 @@ export function parseQuery(source: string): QuestQuery {
 
             case 'status': {
                 const wanted = toList(value.toLowerCase())
-                const valid = wanted.filter(status => (QUEST_STATUSES as string[]).includes(status)) as QuestStatus[]
+                const valid = wanted.filter(status => (BOARD_STATUSES as string[]).includes(status)) as BoardStatus[]
                 for (const status of wanted) {
-                    if (!(QUEST_STATUSES as string[]).includes(status)) {
+                    if (!(BOARD_STATUSES as string[]).includes(status)) {
                         query.errors.push(`Unknown status "${status}".`)
                     }
                 }

@@ -214,6 +214,8 @@ export function wouldCycle(questTitle: string, blockerTitle: string, lookup: Que
 
 export type BoardStatus = QuestStatus | 'blocked'
 
+export const BOARD_STATUSES: BoardStatus[] = [...QUEST_STATUSES, 'blocked']
+
 export const BOARD_STATUS_LABELS: Record<BoardStatus, string> = {
     ...STATUS_LABELS,
     blocked: 'Blocked',

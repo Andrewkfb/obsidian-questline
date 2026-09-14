@@ -9,7 +9,7 @@
 
 import { MarkdownRenderChild, setIcon, type MarkdownPostProcessorContext } from 'obsidian'
 import type Questline from '../main'
-import { progressOf, type Quest, type QuestStatus } from '../quests/Quest'
+import { progressOf, type Quest, type BoardStatus } from '../quests/Quest'
 import {
     MONTHS_SHORT,
     addDays,
@@ -29,7 +29,13 @@ import {
     type RenderContext,
 } from './render'
 
-const EMBED_STATUSES: QuestStatus[] = ['active', 'held', 'available']
+/**
+ * `blocked` is in the default on purpose. A block that does not name statuses
+ * should keep showing everything it showed before blocking became a status of
+ * its own — dropping quests out of a project note silently is worse than
+ * listing one you cannot start yet. Naming statuses explicitly excludes it.
+ */
+const EMBED_STATUSES: BoardStatus[] = ['active', 'held', 'available', 'blocked']
 
 export function registerCodeblock(plugin: Questline): void {
     plugin.registerMarkdownCodeBlockProcessor('questline', (source, el, ctx) => {
@@ -148,13 +154,16 @@ class QuestlineBlock extends MarkdownRenderChild {
         const { index } = this.plugin
         const statuses = this.query.statuses ?? EMBED_STATUSES
 
-        let quests = index.all().filter(quest => statuses.includes(quest.status))
+        let quests = index.all().filter(quest => statuses.includes(index.effectiveStatus(quest)))
         if (project) quests = quests.filter(quest => quest.projects.includes(project))
-        if (this.plugin.settings.hideBlocked) quests = quests.filter(quest => !index.isBlocked(quest))
+        // Asking for blocked outranks the setting that hides them, as on the board.
+        if (this.plugin.settings.hideBlocked && !statuses.includes('blocked')) {
+            quests = quests.filter(quest => !index.isBlocked(quest))
+        }
         quests = index.sorted(quests)
         if (this.query.limit) quests = quests.slice(0, this.query.limit)
 
-        const active = quests.filter(quest => quest.status === 'active').length
+        const active = quests.filter(quest => index.effectiveStatus(quest) === 'active').length
         this.renderHead(parent, `${quests.length} ${quests.length === 1 ? 'quest' : 'quests'} · ${active} active`)
 
         if (quests.length === 0) {
