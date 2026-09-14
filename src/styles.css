@@ -13,13 +13,13 @@
 }
 
 [data-area="Capital"]     { --ql-area: #2E7145; }
-[data-area="Joyfullness"] { --ql-area: #1C63A8; }
+[data-area="Joyfulness"] { --ql-area: #1C63A8; }
 [data-area="Karma"]       { --ql-area: #8A6A0B; }
 [data-area="Longevity"]   { --ql-area: #A02585; }
 [data-area="Lucidity"]    { --ql-area: #B02A32; }
 
 .theme-dark [data-area="Capital"]     { --ql-area: #6FC58A; }
-.theme-dark [data-area="Joyfullness"] { --ql-area: #64B0EE; }
+.theme-dark [data-area="Joyfulness"] { --ql-area: #64B0EE; }
 .theme-dark [data-area="Karma"]       { --ql-area: #E0C04E; }
 .theme-dark [data-area="Longevity"]   { --ql-area: #E877D0; }
 .theme-dark [data-area="Lucidity"]    { --ql-area: #F0737E; }
