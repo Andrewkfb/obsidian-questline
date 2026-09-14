@@ -14,6 +14,8 @@ export interface QuestlineSettings {
     typeValue: string
     objectivesHeading: string
     keys: FrontmatterKeys
+    /** How far out a new quest is dated. 0 means a new quest starts undated. */
+    defaultDueDays: number
     /** Frontmatter key holding a project's priority. Foundry capitalises it. */
     projectPriorityKey: string
 
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: QuestlineSettings = {
     typeValue: 'quest',
     objectivesHeading: 'Objectives',
     keys: { ...DEFAULT_KEYS },
+    defaultDueDays: 45,
     projectPriorityKey: 'Priority',
 
     defaultGroup: 'area',
@@ -227,6 +230,19 @@ export class QuestlineSettingTab extends PluginSettingTab {
                 .onChange(async value => {
                     this.plugin.settings.showBlocks = value
                     await this.commit()
+                }))
+
+        new Setting(containerEl)
+            .setName('Default due horizon')
+            .setDesc('How far out a new quest is dated, in days. The field is still editable at creation; set 0 to start undated.')
+            .addText(text => text
+                .setPlaceholder('45')
+                .setValue(String(this.plugin.settings.defaultDueDays))
+                .onChange(async value => {
+                    const days = Number(value)
+                    if (!Number.isFinite(days) || days < 0) return
+                    this.plugin.settings.defaultDueDays = Math.round(days)
+                    await this.plugin.saveSettings()
                 }))
 
         new Setting(containerEl).setName('Life areas').setHeading()

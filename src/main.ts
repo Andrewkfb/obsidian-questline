@@ -1,6 +1,7 @@
 import { Notice, Plugin, TFile, normalizePath } from 'obsidian'
 import { QuestIndex } from './quests/QuestIndex'
 import { BlockerModal, DueModal } from './views/modals'
+import { QuestCreateModal } from './views/QuestCreateModal'
 import {
     buildQuestNote,
     setQuestStatus,
@@ -8,6 +9,7 @@ import {
     type NewQuestFields,
 } from './quests/QuestWriter'
 import { progressOf, type Objective, type Quest } from './quests/Quest'
+import { addDays } from './quests/periods'
 import { DEFAULT_SETTINGS, QuestlineSettingTab, type QuestlineSettings } from './settings'
 import { BoardView, VIEW_TYPE_BOARD } from './views/BoardView'
 import { registerCodeblock } from './views/codeblock'
@@ -216,22 +218,36 @@ export default class Questline extends Plugin {
             title = `${base}New quest ${suffix++}`
         }
 
-        const fields: NewQuestFields = {
+        const seed: NewQuestFields = {
             title,
             status: 'available',
             areas: project ? this.areasOfProject(project) : [],
             projects: project ? [project.basename] : [],
             priority: null,
-            due: null,
+            // Pre-dated rather than empty: an undated quest tends to stay undated.
+            due: this.settings.defaultDueDays > 0
+                ? addDays(this.todayISO(), this.settings.defaultDueDays)
+                : null,
             accepted: null,
             blockedBy: [],
             objectives: [],
             brief: '',
         }
 
+        new QuestCreateModal(this, seed, fields => void this.writeQuest(folder, fields)).open()
+    }
+
+    /** Creates the note the modal described, keeping the filename unique. */
+    private async writeQuest(folder: string, fields: NewQuestFields): Promise<void> {
+        let title = fields.title
+        let suffix = 2
+        while (this.app.vault.getAbstractFileByPath(`${folder}/${title}.md`)) {
+            title = `${fields.title} ${suffix++}`
+        }
+
         const file = await this.app.vault.create(
             `${folder}/${title}.md`,
-            buildQuestNote(fields, this.settings.keys, this.settings.typeValue, this.settings.objectivesHeading || 'Objectives'),
+            buildQuestNote({ ...fields, title }, this.settings.keys, this.settings.typeValue, this.settings.objectivesHeading || 'Objectives'),
         )
         await this.app.workspace.getLeaf(false).openFile(file)
         new Notice(`Created ${file.path}`)
