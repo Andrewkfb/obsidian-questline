@@ -173,6 +173,7 @@ export function renderQuestRow(
 
     const side = row.createDiv('ql-side')
     if (index.isReady(quest)) side.createSpan({ cls: 'ql-chip is-ready', text: 'Ready' })
+    else if (index.isBlocked(quest)) side.createSpan({ cls: 'ql-chip is-blocked', text: 'Blocked' })
     statusChip(side, quest)
 
     const due = dueText(ctx.plugin, quest)

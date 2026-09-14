@@ -1,14 +1,15 @@
 import { ItemView, type WorkspaceLeaf } from 'obsidian'
 import type Questline from '../main'
-import { STATUS_LABELS, type Quest, type QuestStatus } from '../quests/Quest'
+import { BOARD_STATUS_LABELS, type BoardStatus, type Quest } from '../quests/Quest'
 import type { GroupBy } from '../settings'
 import { renderAreaStrip, renderQuestRow, renderReadyStrip, type RenderContext } from './render'
 
 export const VIEW_TYPE_BOARD = 'questline-board'
 
-type StatusFilter = QuestStatus | 'all' | 'ready'
+type StatusFilter = BoardStatus | 'all' | 'ready'
 
-const STATUS_ORDER: QuestStatus[] = ['active', 'held', 'available', 'complete']
+/** Blocked sits directly after Active: both answer "can I pick this up?" */
+const BOARD_ORDER: BoardStatus[] = ['active', 'blocked', 'held', 'available', 'complete']
 
 interface Group {
     label: string
@@ -60,14 +61,20 @@ export class BoardView extends ItemView {
     private matches(quest: Quest): boolean {
         const { settings, index } = this.plugin
 
+        // Blocked outranks the frontmatter status everywhere on the board, so a
+        // blocked quest is reachable through the Blocked pill and nowhere else.
+        const effective = index.effectiveStatus(quest)
+
         if (this.statusFilter === 'ready') {
             if (!index.isReady(quest)) return false
-        } else if (this.statusFilter !== 'all' && quest.status !== this.statusFilter) {
+        } else if (this.statusFilter !== 'all' && effective !== this.statusFilter) {
             return false
         }
 
-        if (!settings.showComplete && quest.status === 'complete' && this.statusFilter !== 'complete') return false
-        if (settings.hideBlocked && index.isBlocked(quest)) return false
+        if (!settings.showComplete && effective === 'complete' && this.statusFilter !== 'complete') return false
+        // Asking for Blocked outranks the setting that hides them, the same way
+        // asking for Complete outranks the setting that hides those.
+        if (settings.hideBlocked && effective === 'blocked' && this.statusFilter !== 'blocked') return false
 
         if (!this.query) return true
         const haystack = [
@@ -84,8 +91,11 @@ export class BoardView extends ItemView {
         if (this.group === 'none') return [{ label: 'All quests', quests }]
 
         if (this.group === 'status') {
-            return STATUS_ORDER
-                .map(status => ({ label: STATUS_LABELS[status], quests: quests.filter(q => q.status === status) }))
+            return BOARD_ORDER
+                .map(status => ({
+                    label: BOARD_STATUS_LABELS[status],
+                    quests: quests.filter(quest => index.effectiveStatus(quest) === status),
+                }))
                 .filter(group => group.quests.length > 0)
         }
 
@@ -188,12 +198,15 @@ export class BoardView extends ItemView {
 
         const pills = parent.createDiv('ql-pills')
         const tally: Record<string, number> = { all: all.length }
-        for (const quest of all) tally[quest.status] = (tally[quest.status] ?? 0) + 1
+        for (const quest of all) {
+            const effective = this.plugin.index.effectiveStatus(quest)
+            tally[effective] = (tally[effective] ?? 0) + 1
+        }
         tally.ready = this.plugin.index.readyQuests().length
 
         const options: { key: StatusFilter; label: string }[] = [
             { key: 'all', label: 'All' },
-            ...STATUS_ORDER.map(status => ({ key: status as StatusFilter, label: STATUS_LABELS[status] })),
+            ...BOARD_ORDER.map(status => ({ key: status as StatusFilter, label: BOARD_STATUS_LABELS[status] })),
         ]
         if (this.plugin.settings.onUnblock === 'flag') options.push({ key: 'ready', label: 'Ready' })
 

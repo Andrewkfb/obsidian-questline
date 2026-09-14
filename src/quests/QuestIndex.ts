@@ -3,10 +3,12 @@ import type Questline from '../main'
 import {
     blockedByThis,
     compareQuests,
+    effectiveStatus,
     isBlocked,
     isReady,
     resolvePriority,
     type Quest,
+    type BoardStatus,
     type QuestLookup,
     type ResolvedPriority,
 } from './Quest'
@@ -136,6 +138,10 @@ export class QuestIndex extends Component {
 
     isBlocked(quest: Quest): boolean {
         return isBlocked(quest, this.lookup)
+    }
+
+    effectiveStatus(quest: Quest): BoardStatus {
+        return effectiveStatus(quest, this.lookup)
     }
 
     isReady(quest: Quest): boolean {

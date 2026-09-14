@@ -316,6 +316,38 @@ check('an indirect loop is caught', wouldCycle('A', 'C', look), true)
 check('a legitimate blocker is allowed', wouldCycle('C', 'A', look), false)
 check('an unknown blocker is allowed', wouldCycle('A', 'Z', look), false)
 
+/* --------------------------------------------------------- effective status */
+
+import { effectiveStatus } from '../src/quests/Quest'
+
+const mk = (title: string, status: string, blockedBy: string[] = []): any => ({
+    path: title, title, status, areas: [], projects: [], priority: null,
+    blockedBy, due: null, accepted: null, completed: null, objectives: [],
+})
+
+const world: Record<string, any> = {
+    open: mk('open', 'active'),
+    sealed: mk('sealed', 'complete'),
+}
+const look2 = (t: string): any => world[t]
+
+check('an unblocked quest keeps its own status',
+    effectiveStatus(mk('x', 'active'), look2), 'active')
+check('an active quest with an open blocker files under blocked',
+    effectiveStatus(mk('x', 'active', ['open']), look2), 'blocked')
+check('an available quest with an open blocker files under blocked',
+    effectiveStatus(mk('x', 'available', ['open']), look2), 'blocked')
+check('a held quest with an open blocker files under blocked',
+    effectiveStatus(mk('x', 'held', ['open']), look2), 'blocked')
+check('a sealed blocker stops blocking',
+    effectiveStatus(mk('x', 'active', ['sealed']), look2), 'active')
+check('sealing outranks blocking',
+    effectiveStatus(mk('x', 'complete', ['open']), look2), 'complete')
+check('one open blocker among sealed ones still blocks',
+    effectiveStatus(mk('x', 'active', ['sealed', 'open']), look2), 'blocked')
+check('a blocker naming no quest still blocks',
+    effectiveStatus(mk('x', 'active', ['ghost']), look2), 'blocked')
+
 /* -------------------------------------------------------------------- done */
 
 if (failures.length > 0) {

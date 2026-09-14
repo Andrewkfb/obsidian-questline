@@ -211,3 +211,29 @@ export function wouldCycle(questTitle: string, blockerTitle: string, lookup: Que
     }
     return false
 }
+
+export type BoardStatus = QuestStatus | 'blocked'
+
+export const BOARD_STATUS_LABELS: Record<BoardStatus, string> = {
+    ...STATUS_LABELS,
+    blocked: 'Blocked',
+}
+
+/**
+ * What the board files a quest under, which is not always what its frontmatter
+ * says.
+ *
+ * Blocking outranks the declared status. A quest marked `active` that is still
+ * waiting on something is not work you can pick up, and listing it under Active
+ * beside things you can actually start makes the board lie about what is
+ * available to do — the one question the board exists to answer.
+ *
+ * Sealing outranks blocking, because a finished quest is finished whatever it
+ * once waited on. Without that, completing a quest whose blocker is still open
+ * would file it under Blocked forever.
+ */
+export function effectiveStatus(quest: Quest, lookup: QuestLookup): BoardStatus {
+    if (isSealed(quest)) return 'complete'
+    if (isBlocked(quest, lookup)) return 'blocked'
+    return quest.status
+}
