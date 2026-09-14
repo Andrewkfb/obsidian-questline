@@ -112,7 +112,7 @@ export class QuestCreateModal extends Modal {
 
         new Setting(content)
             .setName('Due')
-            .setDesc(`Defaults to ${this.plugin.settings.defaultDueDays} days out. An ISO date, +3d, friday, or empty for none.`)
+            .setDesc(`Defaults to ${this.plugin.settings.defaultDueDays} days out. An ISO date, +3d, -3d, friday, or empty for none.`)
             .addText(text => text
                 .setPlaceholder('+45d')
                 .setValue(this.dueRaw)

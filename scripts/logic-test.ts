@@ -304,6 +304,13 @@ check('an offset crossing a month', parseDueInput('+20d', TODAY), { ok: true, da
 check('a weekday means the next one', parseDueInput('friday', TODAY), { ok: true, date: '2026-09-18' })
 check('a short weekday works', parseDueInput('fri', TODAY), { ok: true, date: '2026-09-18' })
 check('today\'s own weekday means next week', parseDueInput('sunday', TODAY), { ok: true, date: '2026-09-20' })
+check('a negative day offset backdates', parseDueInput('-3d', TODAY), { ok: true, date: '2026-09-10' })
+check('a negative week offset', parseDueInput('-2w', TODAY), { ok: true, date: '2026-08-30' })
+check('yesterday', parseDueInput('yesterday', TODAY), { ok: true, date: '2026-09-12' })
+check('backdating across a month boundary', parseDueInput('-20d', TODAY), { ok: true, date: '2026-08-24' })
+check('an unsigned offset is still forward', parseDueInput('3d', TODAY), { ok: true, date: '2026-09-16' })
+check('an explicit plus is still forward', parseDueInput('+3d', TODAY), { ok: true, date: '2026-09-16' })
+check('a lone minus is not an offset', parseDueInput('-d', TODAY).ok, false)
 check('gibberish is refused with a reason',
     (parseDueInput('next-ish', TODAY) as { ok: false; reason: string }).reason.includes('Could not read'), true)
 

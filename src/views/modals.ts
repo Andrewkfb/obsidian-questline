@@ -29,7 +29,7 @@ export class DueModal extends Modal {
 
         new Setting(this.contentEl)
             .setName('Due')
-            .setDesc('2026-10-01, an offset like +3d or 2w, today, tomorrow, or a weekday. Leave empty to clear it.')
+            .setDesc('2026-10-01, an offset like +3d or -2w, today, tomorrow, yesterday, or a weekday. Leave empty to clear it.')
             .addText(text => {
                 text.setPlaceholder('+3d').setValue(this.quest.due ?? '')
                 this.input = text.inputEl

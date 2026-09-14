@@ -160,12 +160,16 @@ export function parseDueInput(raw: string, todayISO: string): DueParse {
 
     if (text === 'today') return { ok: true, date: todayISO }
     if (text === 'tomorrow') return { ok: true, date: addDays(todayISO, 1) }
+    if (text === 'yesterday') return { ok: true, date: addDays(todayISO, -1) }
 
-    const offset = text.match(/^\+?(\d+)\s*(d|day|days|w|week|weeks)$/)
+    // A negative offset backdates. Recording that something was due last week
+    // is as ordinary as scheduling it for next week, and refusing it only
+    // pushes you into counting squares on a calendar to type an ISO date.
+    const offset = text.match(/^([+-])?(\d+)\s*(d|day|days|w|week|weeks)$/)
     if (offset) {
-        const count = Number(offset[1])
-        const days = offset[2].startsWith('w') ? count * 7 : count
-        return { ok: true, date: addDays(todayISO, days) }
+        const count = Number(offset[2])
+        const days = offset[3].startsWith('w') ? count * 7 : count
+        return { ok: true, date: addDays(todayISO, offset[1] === '-' ? -days : days) }
     }
 
     const weekday = WEEKDAYS.findIndex(day => day === text || day.slice(0, 3) === text)
@@ -176,7 +180,7 @@ export function parseDueInput(raw: string, todayISO: string): DueParse {
         return { ok: true, date: addDays(todayISO, ahead) }
     }
 
-    return { ok: false, reason: `Could not read "${raw.trim()}". Try 2026-10-01, +3d, or friday.` }
+    return { ok: false, reason: `Could not read "${raw.trim()}". Try 2026-10-01, +3d, -3d, or friday.` }
 }
 
 /** Writing `null` removes the property rather than leaving an empty key behind. */
