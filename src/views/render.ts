@@ -8,7 +8,7 @@
 
 import { Keymap, Notice, setIcon, type App } from 'obsidian'
 import type Questline from '../main'
-import { STATUS_LABELS, progressOf, summariseArea, type Quest } from '../quests/Quest'
+import { BOARD_STATUS_LABELS, STATUS_LABELS, progressOf, summariseArea, type Quest } from '../quests/Quest'
 import { parseInline } from '../quests/inline'
 import { formatShortDate } from '../quests/periods'
 import { DueModal } from './modals'
@@ -149,13 +149,32 @@ export function renderBlockers(parent: HTMLElement, quest: Quest, ctx: RenderCon
             const blocker = index.lookup(title)
             return !blocker || blocker.status !== 'complete'
         })
+        const missing = open.filter(title => !index.lookup(title))
         const line = parent.createDiv(open.length > 0 ? 'ql-blocked' : 'ql-blocked is-clear')
-        setIcon(line.createSpan('ql-blocked-icon'), open.length > 0 ? 'circle-slash' : 'circle-check')
-        line.createSpan({
-            text: open.length > 0
-                ? `Blocked by ${open.join(', ')}`
-                : `Unblocked — ${quest.blockedBy.join(', ')} complete`,
-        })
+        if (missing.length > 0) line.addClass('is-missing')
+        setIcon(
+            line.createSpan('ql-blocked-icon'),
+            open.length === 0 ? 'circle-check' : missing.length > 0 ? 'circle-help' : 'circle-slash',
+        )
+
+        if (open.length === 0) {
+            line.createSpan({ text: `Unblocked — ${quest.blockedBy.join(', ')} complete` })
+            startButton(line, quest, ctx)
+        } else {
+            // Names wrap rather than truncate: the names are the whole point of
+            // the line, and "+2 more" would mean opening the note to read them.
+            line.appendText('Blocked by ')
+            open.forEach((title, at) => {
+                if (at > 0) line.appendText(', ')
+                noteLink(line, title, ctx, 'ql-blocked-link')
+            })
+            if (missing.length > 0) {
+                line.createSpan({
+                    cls: 'ql-blocked-ghost',
+                    text: missing.length === 1 ? ' no note by this name' : ' no notes by these names',
+                })
+            }
+        }
     }
 
     if (!settings.showBlocks || quest.status === 'complete') return
@@ -164,7 +183,11 @@ export function renderBlockers(parent: HTMLElement, quest: Quest, ctx: RenderCon
 
     const line = parent.createDiv('ql-blocks')
     setIcon(line.createSpan('ql-blocked-icon'), 'circle-slash')
-    line.createSpan({ text: `Blocks ${blocking.map(other => other.title).join(', ')}` })
+    line.appendText('Blocks ')
+    blocking.forEach((other, at) => {
+        if (at > 0) line.appendText(', ')
+        questLink(line, other, ctx, 'ql-blocked-link')
+    })
 }
 
 export interface QuestRowOptions {
@@ -205,11 +228,28 @@ export function renderQuestRow(
     }
 
     const main = row.createDiv('ql-main')
-    questLink(main, quest, ctx, 'ql-title')
 
+    // Status is a dot rather than a chip: inside the Active filter every row
+    // said ACTIVE in the loudest treatment on screen, drowning the title.
+    const titleLine = main.createDiv('ql-titleline')
+    const effective = index.effectiveStatus(quest)
+    const dot = titleLine.createSpan({ cls: `ql-dot is-${effective}` })
+    dot.setAttribute('aria-label', BOARD_STATUS_LABELS[effective])
+    dot.setAttribute('title', BOARD_STATUS_LABELS[effective])
+    questLink(titleLine, quest, ctx, 'ql-title')
+
+    // One plain line, dot-separated. Nothing here gets a background: these are
+    // identity, and the only thing worth a pill is state you can act on.
     const meta = main.createDiv('ql-meta')
+    let first = true
+    const separate = (): void => {
+        if (!first) meta.createSpan({ cls: 'ql-sep', text: '\u00b7' })
+        first = false
+    }
+
     const priority = index.priorityOf(quest)
     if (priority.value !== null) {
+        separate()
         const badge = meta.createSpan({ cls: 'ql-priority', text: `P${priority.value}` })
         if (priority.inherited) {
             badge.addClass('is-inherited')
@@ -219,10 +259,14 @@ export function renderQuestRow(
         }
     }
     for (const area of quest.areas) {
+        separate()
         meta.createSpan({ cls: 'ql-area-chip', text: area }).dataset.area = area
     }
     if (!options.compact) {
-        for (const project of quest.projects) noteLink(meta, project, ctx, 'ql-link')
+        for (const project of quest.projects) {
+            separate()
+            noteLink(meta, project, ctx, 'ql-link')
+        }
     }
 
     renderBlockers(main, quest, ctx)
@@ -251,9 +295,9 @@ export function renderQuestRow(
         }
     }
 
+    // Ready and Blocked are already said in words by the blocker line, and by
+    // the dot's colour. A chip repeating them was a third voice on one fact.
     const side = row.createDiv('ql-side')
-    if (index.isReady(quest)) side.createSpan({ cls: 'ql-chip is-ready', text: 'Ready' })
-    else if (index.isBlocked(quest)) side.createSpan({ cls: 'ql-chip is-blocked', text: 'Blocked' })
     statusChip(side, quest)
 
     const due = dueChip(ctx.plugin, quest)

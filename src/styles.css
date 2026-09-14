@@ -139,9 +139,13 @@
 
 .ql-quest {
 	display: grid;
-	grid-template-columns: 22px minmax(0, 1fr) auto;
-	gap: 10px;
-	padding: 11px 13px 12px 8px;
+	/* A fixed rail, not `auto`: right-aligning children of different widths is
+	   what made the right edge ragged. Fixed and left-aligned inside, every due
+	   pill and meter on the board shares one vertical axis. */
+	grid-template-columns: 20px minmax(0, 1fr) 132px;
+	gap: 11px;
+	align-items: start;
+	padding: 9px 12px 10px 6px;
 	border-top: 1px solid var(--background-modifier-border);
 }
 .ql-list .ql-quest:first-child { border-top: 0; }
@@ -156,7 +160,14 @@
 }
 .ql-disclosure:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
 
-.ql-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ql-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.ql-titleline { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+.ql-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--text-faint); }
+.ql-dot.is-active { background: var(--text-accent); }
+.ql-dot.is-held, .ql-dot.is-blocked { background: var(--color-orange); }
+.ql-dot.is-available { background: var(--text-faint); }
+.ql-dot.is-complete { background: var(--color-green); }
 .ql-title {
 	font-size: var(--font-ui-medium); font-weight: 600; color: var(--text-normal);
 	text-decoration: none; cursor: pointer; line-height: 1.3;
@@ -208,7 +219,7 @@
 .ql-box .svg-icon { width: 11px; height: 11px; }
 .ql-objective.is-done .ql-objective-text { color: var(--text-faint); text-decoration: line-through; }
 
-.ql-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; flex: none; }
+.ql-side { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .ql-chip {
 	font-size: var(--font-ui-smaller); font-weight: 600;
 	letter-spacing: .06em; text-transform: uppercase;
@@ -470,3 +481,27 @@ button.ql-due.is-late:hover   { border-color: var(--color-red); color: var(--col
 
 /* A sealed quest's row is dimmed; its pill should not fight that. */
 .ql-quest.is-sealed .ql-due { opacity: 0.9; }
+
+/* ------------------------------------------------- meta line and blockers */
+.ql-sep { opacity: .4; }
+.ql-blocked, .ql-blocks {
+	display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+	font-size: var(--font-ui-smaller); line-height: 1.5; margin-top: 2px;
+}
+.ql-blocked { color: var(--color-orange); }
+.ql-blocked.is-clear { color: var(--color-green); }
+.ql-blocked.is-missing { color: var(--color-red); }
+.ql-blocks { color: var(--text-faint); }
+.ql-blocked-icon { display: inline-flex; }
+.ql-blocked-icon .svg-icon { width: 12px; height: 12px; stroke-width: 2.2px; }
+.ql-blocked-link {
+	color: inherit; text-decoration: underline; text-underline-offset: 2px;
+	text-decoration-color: var(--background-modifier-border); cursor: pointer;
+	font-size: var(--font-ui-smaller);
+}
+.ql-blocked-link:hover { color: inherit; text-decoration-color: currentColor; }
+.ql-blocked-ghost { opacity: .8; font-style: italic; }
+
+/* A neutral date is quiet, so that a soon or overdue one is the thing the eye
+   finds on a board where most rows carry a date. */
+.ql-due { background: var(--background-modifier-hover); border-color: transparent; }
