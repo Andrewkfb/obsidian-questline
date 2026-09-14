@@ -107,6 +107,17 @@ export function parsePeriodName(name: string): Period | null {
     return null
 }
 
+/** `2026-10-27` -> `27 Oct`, keeping the year only when it is not this one. */
+export function formatShortDate(iso: string, todayISO: string): string {
+    const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (!match) return iso
+    const month = Number(match[2]) - 1
+    if (month < 0 || month > 11) return iso
+    const day = Number(match[3])
+    const short = `${day} ${MONTHS_SHORT[month]}`
+    return match[1] === todayISO.slice(0, 4) ? short : `${short} ${match[1]}`
+}
+
 export function inPeriod(date: string | null, period: Period): boolean {
     if (!date) return false
     return date >= period.start && date <= period.end

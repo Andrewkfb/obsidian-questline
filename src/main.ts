@@ -10,7 +10,7 @@ import {
 } from './quests/QuestWriter'
 import { progressOf, type Objective, type Quest } from './quests/Quest'
 import { addDays } from './quests/periods'
-import { DEFAULT_SETTINGS, QuestlineSettingTab, type QuestlineSettings } from './settings'
+import { DEFAULT_SETTINGS, QuestlineSettingTab, migrateGroupBy, type QuestlineSettings } from './settings'
 import { BoardView, VIEW_TYPE_BOARD } from './views/BoardView'
 import { registerCodeblock } from './views/codeblock'
 
@@ -83,6 +83,9 @@ export default class Questline extends Plugin {
             ...DEFAULT_SETTINGS,
             ...saved,
             keys: { ...DEFAULT_SETTINGS.keys, ...saved?.keys },
+            // A vault saved before a grouping mode was retired would otherwise
+            // open the board on a mode that no longer renders anything.
+            defaultGroup: migrateGroupBy(saved?.defaultGroup) ?? DEFAULT_SETTINGS.defaultGroup,
         }
     }
 

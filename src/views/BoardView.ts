@@ -108,14 +108,25 @@ export class BoardView extends ItemView {
             }))
         }
 
-        // Grouped by primary life area, in the order the area folder lists them.
-        const groups: Group[] = index.areas().map(area => ({
-            label: area,
-            quests: quests.filter(quest => quest.areas[0] === area),
-        }))
-        const loose = quests.filter(quest => quest.areas.length === 0)
-        if (loose.length > 0) groups.push({ label: 'No life area', quests: loose })
-        return groups.filter(group => group.quests.length > 0)
+        // Grouped by resolved priority, so a quest sits under the priority it
+        // actually has — inherited from its project unless it overrides one.
+        const buckets = new Map<number, Quest[]>()
+        const unranked: Quest[] = []
+        for (const quest of quests) {
+            const { value } = index.priorityOf(quest)
+            if (value === null) unranked.push(quest)
+            else {
+                const bucket = buckets.get(value)
+                if (bucket) bucket.push(quest)
+                else buckets.set(value, [quest])
+            }
+        }
+
+        const groups: Group[] = Array.from(buckets.keys())
+            .sort((a, b) => a - b)
+            .map(value => ({ label: `Priority ${value}`, quests: buckets.get(value) as Quest[] }))
+        if (unranked.length > 0) groups.push({ label: 'No priority', quests: unranked })
+        return groups
     }
 
     /* -------------------------------------------------------------- render */
@@ -146,7 +157,6 @@ export class BoardView extends ItemView {
         for (const group of this.groupQuests(visible)) {
             const section = inner.createDiv('ql-group')
             const head = section.createDiv('ql-group-head')
-            head.dataset.area = group.label
             head.createEl('h3', { text: group.label })
             head.createSpan({ cls: 'ql-group-n', text: String(group.quests.length) })
 
@@ -183,7 +193,7 @@ export class BoardView extends ItemView {
 
         const select = controls.createEl('select', 'ql-select')
         for (const [value, label] of Object.entries({
-            area: 'Group by life area',
+            priority: 'Group by priority',
             status: 'Group by status',
             project: 'Group by project',
             none: 'No grouping',

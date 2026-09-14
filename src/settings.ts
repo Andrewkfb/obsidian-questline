@@ -2,7 +2,8 @@ import { PluginSettingTab, Setting, type App } from 'obsidian'
 import type Questline from './main'
 import { DEFAULT_KEYS, type FrontmatterKeys } from './quests/QuestParser'
 
-export type GroupBy = 'area' | 'status' | 'project' | 'none'
+export { migrateGroupBy, type GroupBy } from './quests/grouping'
+import type { GroupBy } from './quests/grouping'
 
 /** What the plugin does the moment a quest's last blocker is sealed. */
 export type UnblockBehaviour = 'flag' | 'quiet' | 'activate'
@@ -44,7 +45,7 @@ export const DEFAULT_SETTINGS: QuestlineSettings = {
     defaultDueDays: 45,
     projectPriorityKey: 'Priority',
 
-    defaultGroup: 'area',
+    defaultGroup: 'priority',
     showComplete: false,
     autoComplete: true,
 
@@ -135,7 +136,7 @@ export class QuestlineSettingTab extends PluginSettingTab {
             .setName('Group quests by')
             .setDesc('How the board arranges quests when it opens.')
             .addDropdown(drop => drop
-                .addOptions({ area: 'Life area', status: 'Status', project: 'Project', none: 'No grouping' })
+                .addOptions({ priority: 'Priority', status: 'Status', project: 'Project', none: 'No grouping' })
                 .setValue(this.plugin.settings.defaultGroup)
                 .onChange(async value => {
                     this.plugin.settings.defaultGroup = value as GroupBy

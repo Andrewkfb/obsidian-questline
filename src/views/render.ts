@@ -10,6 +10,7 @@ import { Keymap, Notice, setIcon, type App } from 'obsidian'
 import type Questline from '../main'
 import { STATUS_LABELS, progressOf, summariseArea, type Quest } from '../quests/Quest'
 import { parseInline } from '../quests/inline'
+import { formatShortDate } from '../quests/periods'
 import { DueModal } from './modals'
 
 export interface RenderContext {
@@ -22,17 +23,37 @@ export interface RenderContext {
     refresh: () => void
 }
 
-export function dueText(plugin: Questline, quest: Quest): { text: string; cls: string } | null {
+export interface DueChip {
+    text: string
+    cls: string
+    icon: string
+}
+
+/**
+ * The words and tone for the due pill.
+ *
+ * Dates are spelled `27 Oct` rather than `2026-10-27`: the pill is read at a
+ * glance beside a dozen others, and the year is noise in all but the rare case
+ * where it is not this one.
+ */
+export function dueChip(plugin: Questline, quest: Quest): DueChip | null {
     if (quest.status === 'complete') {
-        return quest.completed ? { text: `sealed ${quest.completed}`, cls: '' } : null
+        if (!quest.completed) return null
+        return { text: `sealed ${formatShortDate(quest.completed, plugin.todayISO())}`, cls: 'is-sealed', icon: 'check' }
     }
+
     if (!quest.due) return null
     const days = plugin.daysUntil(quest.due)
     if (days === null) return null
-    if (days < 0) return { text: `${Math.abs(days)} days overdue`, cls: 'is-late' }
-    if (days === 0) return { text: 'due today', cls: 'is-late' }
-    if (days <= 10) return { text: `due in ${days} days`, cls: 'is-soon' }
-    return { text: `due ${quest.due}`, cls: '' }
+
+    if (days < 0) {
+        const late = Math.abs(days)
+        return { text: `${late} ${late === 1 ? 'day' : 'days'} overdue`, cls: 'is-late', icon: 'alert-circle' }
+    }
+    if (days === 0) return { text: 'due today', cls: 'is-late', icon: 'alert-circle' }
+    if (days === 1) return { text: 'due tomorrow', cls: 'is-soon', icon: 'clock' }
+    if (days <= 10) return { text: `due in ${days} days`, cls: 'is-soon', icon: 'clock' }
+    return { text: `due ${formatShortDate(quest.due, plugin.todayISO())}`, cls: '', icon: 'calendar' }
 }
 
 export function questLink(parent: HTMLElement, quest: Quest, ctx: RenderContext, cls: string): HTMLElement {
@@ -219,9 +240,11 @@ export function renderQuestRow(
     else if (index.isBlocked(quest)) side.createSpan({ cls: 'ql-chip is-blocked', text: 'Blocked' })
     statusChip(side, quest)
 
-    const due = dueText(ctx.plugin, quest)
+    const due = dueChip(ctx.plugin, quest)
     if (due) {
-        const chip = side.createEl('button', { cls: `ql-due ${due.cls}`, text: due.text })
+        const chip = side.createEl('button', { cls: `ql-due ${due.cls}` })
+        setIcon(chip.createSpan('ql-due-icon'), due.icon)
+        chip.createSpan({ cls: 'ql-due-text', text: due.text })
         chip.setAttribute('title', 'Change the due date')
         chip.addEventListener('click', event => {
             event.stopPropagation()

@@ -389,6 +389,21 @@ check('empty brackets stay text', parseInline('[[]]'), [{ kind: 'text', text: '[
 check('parseInline is not stateful across calls',
     [parseInline('[[A]]').length, parseInline('[[A]]').length], [1, 1])
 
+/* ------------------------------------------------------------ group-by move */
+
+import { migrateGroupBy } from '../src/quests/grouping'
+
+// A vault that saved `area` before the mode was retired must not open the
+// board on a grouping that no longer renders anything.
+check('the retired area mode lands on priority', migrateGroupBy('area'), 'priority')
+check('a surviving mode is left alone', migrateGroupBy('status'), 'status')
+check('project survives', migrateGroupBy('project'), 'project')
+check('none survives', migrateGroupBy('none'), 'none')
+check('priority survives', migrateGroupBy('priority'), 'priority')
+check('an unknown mode falls back', migrateGroupBy('sideways'), undefined)
+check('a missing setting falls back', migrateGroupBy(undefined), undefined)
+check('a non-string falls back', migrateGroupBy(3), undefined)
+
 /* -------------------------------------------------------------------- done */
 
 if (failures.length > 0) {
