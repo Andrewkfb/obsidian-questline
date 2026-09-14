@@ -1,5 +1,6 @@
 import { Notice, Plugin, TFile, normalizePath } from 'obsidian'
 import { QuestIndex } from './quests/QuestIndex'
+import { BlockerModal, DueModal } from './views/modals'
 import {
     buildQuestNote,
     setQuestStatus,
@@ -36,6 +37,26 @@ export default class Questline extends Plugin {
             id: 'new-quest',
             name: 'New quest',
             callback: () => void this.createQuest(),
+        })
+        this.addCommand({
+            id: 'set-quest-due',
+            name: 'Set due date for this quest',
+            checkCallback: (checking: boolean) => {
+                const found = this.activeQuest()
+                if (!found) return false
+                if (!checking) new DueModal(this, found.quest, found.file).open()
+                return true
+            },
+        })
+        this.addCommand({
+            id: 'set-quest-blockers',
+            name: 'Set blockers for this quest',
+            checkCallback: (checking: boolean) => {
+                const found = this.activeQuest()
+                if (!found) return false
+                if (!checking) new BlockerModal(this, found.quest, found.file).open()
+                return true
+            },
         })
         this.addCommand({
             id: 'new-quest-for-note',
@@ -164,6 +185,14 @@ export default class Questline extends Plugin {
     }
 
     /* -------------------------------------------------------------- creation */
+
+    /** The quest note in the active tab, when there is one and it is indexed. */
+    activeQuest(): { quest: Quest; file: TFile } | null {
+        const file = this.app.workspace.getActiveFile()
+        if (!file) return null
+        const quest = this.index.get(file.path)
+        return quest ? { quest, file } : null
+    }
 
     private isProjectNote(file: TFile): boolean {
         const folder = normalizePath(this.settings.projectFolder)

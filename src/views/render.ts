@@ -9,6 +9,7 @@
 import { Notice, setIcon, type App } from 'obsidian'
 import type Questline from '../main'
 import { STATUS_LABELS, progressOf, summariseArea, type Quest } from '../quests/Quest'
+import { DueModal } from './modals'
 
 export interface RenderContext {
     plugin: Questline
@@ -175,7 +176,15 @@ export function renderQuestRow(
     statusChip(side, quest)
 
     const due = dueText(ctx.plugin, quest)
-    if (due) side.createSpan({ cls: `ql-due ${due.cls}`, text: due.text })
+    if (due) {
+        const chip = side.createEl('button', { cls: `ql-due ${due.cls}`, text: due.text })
+        chip.setAttribute('title', 'Change the due date')
+        chip.addEventListener('click', event => {
+            event.stopPropagation()
+            const file = ctx.plugin.app.vault.getFileByPath(quest.path)
+            if (file) new DueModal(ctx.plugin, quest, file).open()
+        })
+    }
 
     const progressEl = side.createDiv('ql-progress')
     meter(progressEl, progress.total > 0 ? progress.done / progress.total : 0)

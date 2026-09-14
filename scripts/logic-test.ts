@@ -283,6 +283,39 @@ check('complete quests are excluded entirely',
 check('a genuinely empty area', summariseArea([]), { live: 0, active: 0, done: 0, total: 0 })
 check('an area of only sealed quests is empty', summariseArea([areaQuest('complete', 2, 0)]).live, 0)
 
+/* ------------------------------------------------------- due dates + cycles */
+
+import { parseDueInput } from '../src/quests/QuestWriter'
+import { wouldCycle } from '../src/quests/Quest'
+
+const TODAY = '2026-09-13' // a Sunday
+
+check('an ISO date passes through', parseDueInput('2026-10-01', TODAY), { ok: true, date: '2026-10-01' })
+check('an impossible date is refused', parseDueInput('2026-02-30', TODAY).ok, false)
+check('a non-leap 29 Feb is refused', parseDueInput('2027-02-29', TODAY).ok, false)
+check('empty clears the property', parseDueInput('', TODAY), { ok: true, date: null })
+check('none clears too', parseDueInput('none', TODAY), { ok: true, date: null })
+check('today', parseDueInput('today', TODAY), { ok: true, date: '2026-09-13' })
+check('tomorrow', parseDueInput('tomorrow', TODAY), { ok: true, date: '2026-09-14' })
+check('a day offset', parseDueInput('+3d', TODAY), { ok: true, date: '2026-09-16' })
+check('an offset without the plus', parseDueInput('10d', TODAY), { ok: true, date: '2026-09-23' })
+check('a week offset', parseDueInput('2w', TODAY), { ok: true, date: '2026-09-27' })
+check('an offset crossing a month', parseDueInput('+20d', TODAY), { ok: true, date: '2026-10-03' })
+check('a weekday means the next one', parseDueInput('friday', TODAY), { ok: true, date: '2026-09-18' })
+check('a short weekday works', parseDueInput('fri', TODAY), { ok: true, date: '2026-09-18' })
+check('today\'s own weekday means next week', parseDueInput('sunday', TODAY), { ok: true, date: '2026-09-20' })
+check('gibberish is refused with a reason',
+    (parseDueInput('next-ish', TODAY) as { ok: false; reason: string }).reason.includes('Could not read'), true)
+
+const chain: Record<string, string[]> = { A: [], B: ['A'], C: ['B'] }
+const look = (t: string): any => (t in chain ? { title: t, blockedBy: chain[t] } : undefined)
+
+check('a quest cannot block itself', wouldCycle('A', 'A', look), true)
+check('a direct loop is caught', wouldCycle('A', 'B', look), true)
+check('an indirect loop is caught', wouldCycle('A', 'C', look), true)
+check('a legitimate blocker is allowed', wouldCycle('C', 'A', look), false)
+check('an unknown blocker is allowed', wouldCycle('A', 'Z', look), false)
+
 /* -------------------------------------------------------------------- done */
 
 if (failures.length > 0) {

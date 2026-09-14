@@ -6,6 +6,7 @@
  */
 
 import type { FileManager, TFile, Vault } from 'obsidian'
+import { addDays } from './periods'
 import type { QuestStatus } from './Quest'
 import type { FrontmatterKeys } from './QuestParser'
 
@@ -128,5 +129,78 @@ export async function setQuestPriority(
     await fileManager.processFrontMatter(file, frontmatter => {
         if (priority === null) delete frontmatter[keys.priority]
         else frontmatter[keys.priority] = priority
+    })
+}
+
+/* --------------------------------------------------------------- due dates */
+
+export type DueParse = { ok: true; date: string | null } | { ok: false; reason: string }
+
+const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+function isRealDate(iso: string): boolean {
+    const parsed = new Date(iso + 'T00:00:00Z')
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === iso
+}
+
+/**
+ * Typing a date should not mean counting days on a calendar. Accepts an ISO
+ * date, `+3d` / `2w`, `today`, `tomorrow`, or a weekday name meaning its next
+ * occurrence. Empty (or `none`) clears the property.
+ *
+ * Returns a result rather than throwing so the modal can show the reason.
+ */
+export function parseDueInput(raw: string, todayISO: string): DueParse {
+    const text = raw.trim().toLowerCase()
+    if (text === '' || text === 'none' || text === 'clear') return { ok: true, date: null }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        return isRealDate(text) ? { ok: true, date: text } : { ok: false, reason: `${text} is not a real date.` }
+    }
+
+    if (text === 'today') return { ok: true, date: todayISO }
+    if (text === 'tomorrow') return { ok: true, date: addDays(todayISO, 1) }
+
+    const offset = text.match(/^\+?(\d+)\s*(d|day|days|w|week|weeks)$/)
+    if (offset) {
+        const count = Number(offset[1])
+        const days = offset[2].startsWith('w') ? count * 7 : count
+        return { ok: true, date: addDays(todayISO, days) }
+    }
+
+    const weekday = WEEKDAYS.findIndex(day => day === text || day.slice(0, 3) === text)
+    if (weekday !== -1) {
+        // getUTCDay: Sunday is 0, so shift to a Monday-first week to match WEEKDAYS.
+        const current = (new Date(todayISO + 'T00:00:00Z').getUTCDay() + 6) % 7
+        const ahead = (weekday - current + 7) || 7 // never today; "friday" on a Friday means next Friday
+        return { ok: true, date: addDays(todayISO, ahead) }
+    }
+
+    return { ok: false, reason: `Could not read "${raw.trim()}". Try 2026-10-01, +3d, or friday.` }
+}
+
+/** Writing `null` removes the property rather than leaving an empty key behind. */
+export async function setQuestDue(
+    fileManager: FileManager,
+    file: TFile,
+    date: string | null,
+    keys: FrontmatterKeys,
+): Promise<void> {
+    await fileManager.processFrontMatter(file, frontmatter => {
+        if (date === null) delete frontmatter[keys.due]
+        else frontmatter[keys.due] = date
+    })
+}
+
+/** Blockers are stored as wikilinks so they behave like every other vault link. */
+export async function setQuestBlockedBy(
+    fileManager: FileManager,
+    file: TFile,
+    titles: string[],
+    keys: FrontmatterKeys,
+): Promise<void> {
+    await fileManager.processFrontMatter(file, frontmatter => {
+        if (titles.length === 0) delete frontmatter[keys.blockedBy]
+        else frontmatter[keys.blockedBy] = titles.map(title => `[[${title}]]`)
     })
 }

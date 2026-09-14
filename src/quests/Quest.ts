@@ -188,3 +188,26 @@ export function summariseArea(quests: Quest[]): AreaSummary {
 export function blockedByThis(quest: Quest, all: Quest[]): Quest[] {
     return all.filter(other => other.blockedBy.includes(quest.title))
 }
+
+/**
+ * Would making `blockerTitle` block `questTitle` create a loop?
+ *
+ * Every derivation here is single-level, so a cycle does not hang anything —
+ * it does something worse and quieter: both quests wait on each other and
+ * neither is ever ready, with nothing on screen saying why.
+ */
+export function wouldCycle(questTitle: string, blockerTitle: string, lookup: QuestLookup): boolean {
+    if (questTitle === blockerTitle) return true
+
+    const seen = new Set<string>()
+    const stack = [blockerTitle]
+    while (stack.length > 0) {
+        const current = stack.pop() as string
+        if (current === questTitle) return true
+        if (seen.has(current)) continue
+        seen.add(current)
+        const quest = lookup(current)
+        if (quest) stack.push(...quest.blockedBy)
+    }
+    return false
+}
